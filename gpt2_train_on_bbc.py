@@ -5,8 +5,18 @@ from datasets import load_dataset
 from datasets import load_from_disk
 
 # Load and preprocess the dataset
-dataset = load_from_disk("bbc-news")
-text_samples = dataset["train"]["text"]
+dataset = load_from_disk("glue-mrpc")
+
+# Combine sentence1 and sentence2 into a single field for training
+def combine_sentences(example):
+    # Assuming example has keys 'sentence1' and 'sentence2'
+    sentence1 = example['sentence1'] if 'sentence1' in example else ''
+    sentence2 = example['sentence2'] if 'sentence2' in example else ''
+    example['combined_text'] = f"{sentence1} {sentence2}".strip()  # Combine and strip whitespace
+    return example
+
+# Apply the combining function to the dataset
+dataset = dataset.map(combine_sentences)
 
 # Initialize the tokenizer and model
 tokenizer = GPT2Tokenizer.from_pretrained('local-gpt2-tokenizer')
@@ -15,7 +25,7 @@ model = GPT2LMHeadModel.from_pretrained('local-gpt2-model')
 
 # Tokenize and encode the dataset
 def tokenize_function(example):
-    return tokenizer(example["text"], truncation=True, max_length=512, padding="max_length")
+    return tokenizer(example["combined_text"], truncation=True, max_length=512, padding="max_length")
 
 tokenized_dataset = dataset.map(tokenize_function, batched=True)
 
@@ -42,7 +52,7 @@ def collate_fn(batch):
 
 # Prepare the data for training
 train_dataset = tokenized_dataset["train"]
-train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True,collate_fn=collate_fn)
+train_dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
 # Set up the training parameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -56,10 +66,10 @@ for batch in train_dataloader:
 
 # Training loop
 model.train()
-num_epochs=100
+num_epochs = 100
 for epoch in range(num_epochs):
     print("epoch:{}".format(epoch))
-    for step,batch in enumerate(train_dataloader):
+    for step, batch in enumerate(train_dataloader):
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
         labels = batch["input_ids"].to(device)
@@ -67,9 +77,9 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
         outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
         loss = outputs.loss
-        if step%100==0:
-            print("Step-{},Loss-{}".format(step,loss.item()))
-        
+        if step % 100 == 0:
+            print("Step-{}, Loss-{}".format(step, loss.item()))
+
         loss.backward()
         optimizer.step()
 
