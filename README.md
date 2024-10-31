@@ -1,4 +1,4 @@
-# GPT-2 Fine-Tuning on BBC News Dataset
+# GPT-2 Fine-Tuning on BBC News and glue/mrpc Dataset
 
 ## Overview
 This project leverages the GPT-2 language model, a cutting-edge generative model known for its ability to generate coherent, contextually relevant text. We fine-tune GPT-2 on the BBC News dataset, which consists of diverse news articles, to enhance the model's ability to generate news-style text and analyze prompts in this specific context.
